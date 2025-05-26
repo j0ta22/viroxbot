@@ -5,9 +5,13 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
 def get_encryption_key(salt=None):
-    """Generar una clave de encriptación"""
+    """
+    Genera una clave de encriptación usando PBKDF2
+    """
     if salt is None:
         salt = os.urandom(16)
+    elif isinstance(salt, str):
+        salt = salt.encode()
     
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -20,12 +24,19 @@ def get_encryption_key(salt=None):
     return Fernet(key), salt
 
 def encrypt_private_key(private_key, salt=None):
-    """Encriptar una clave privada"""
+    """
+    Encripta una clave privada usando Fernet
+    """
     f, salt = get_encryption_key(salt)
     encrypted_data = f.encrypt(private_key.encode())
     return encrypted_data, salt
 
 def decrypt_private_key(encrypted_data, salt):
-    """Desencriptar una clave privada"""
+    """
+    Desencripta una clave privada usando Fernet
+    """
+    if isinstance(salt, str):
+        salt = salt.encode()
     f, _ = get_encryption_key(salt)
-    return f.decrypt(encrypted_data).decode() 
+    decrypted_data = f.decrypt(encrypted_data)
+    return decrypted_data.decode() 
