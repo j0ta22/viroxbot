@@ -106,4 +106,23 @@ def transfer_tokens(private_key, token_address, destination):
         return f"📍 {account.address}\n✅ Transferencia exitosa\n💰 {readable_balance:.4f} tokens\n🔗 Tx: {tx_hash.hex()}"
     
     except Exception as e:
-        return f"❌ Error al transferir desde {account.address}: {str(e)}" 
+        return f"❌ Error al transferir desde {account.address}: {str(e)}"
+
+def get_wallets_info(private_keys):
+    """
+    Obtiene información de las wallets incluyendo balance de ETH y dirección
+    """
+    wallets_info = []
+    for pk in private_keys:
+        try:
+            account = w3.eth.account.from_key(pk)
+            balance = w3.eth.get_balance(account.address)
+            balance_eth = w3.from_wei(balance, 'ether')
+            wallets_info.append({
+                'address': account.address,
+                'balance': balance_eth
+            })
+        except Exception as e:
+            print(f"Error al obtener información de wallet: {e}")
+            continue
+    return wallets_info 
