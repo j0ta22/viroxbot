@@ -303,6 +303,34 @@ async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error en delete_command: {e}")
         await update.message.reply_text(f"❌ Error al eliminar wallets: {str(e)}")
 
+async def destination_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manejar el comando /destination"""
+    try:
+        user_id = update.message.from_user.id
+        
+        if not context.args or len(context.args) != 1:
+            await update.message.reply_text(
+                "❌ Uso incorrecto. Por favor usa: /destination <dirección>\n"
+                "Ejemplo: /destination 0x1234..."
+            )
+            return
+        
+        destination = context.args[0]
+        if not Web3().is_address(destination):
+            await update.message.reply_text("❌ Dirección inválida. Por favor, envía una dirección válida de Base.")
+            return
+        
+        if save_destination(user_id, destination):
+            await update.message.reply_text(
+                f"✅ Dirección de destino guardada correctamente:\n"
+                f"🎯 {destination}"
+            )
+        else:
+            await update.message.reply_text("❌ Error al guardar la dirección de destino.")
+    except Exception as e:
+        logger.error(f"Error en destination_command: {e}")
+        await update.message.reply_text(f"❌ Error al configurar destino: {str(e)}")
+
 def main():
     """Función principal para iniciar el bot"""
     # Crear la aplicación
