@@ -64,25 +64,46 @@ def init_db():
         if 'conn' in locals():
             conn.close()
 
-def save_wallet(user_id, private_key, salt):
-    """Guardar una wallet en la base de datos"""
+def save_wallet(user_id: int, address: str, private_key: bytes, salt: str) -> bool:
+    """
+    Guardar una wallet en la base de datos
+    
+    Args:
+        user_id: ID del usuario de Telegram
+        address: Dirección de la wallet
+        private_key: Clave privada encriptada
+        salt: Salt usado para la encriptación
+    
+    Returns:
+        bool: True si se guardó correctamente, False en caso contrario
+    """
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Verificar si el usuario ya tiene wallets
+        cur.execute('SELECT COUNT(*) FROM wallets WHERE user_id = %s', (user_id,))
+        count = cur.fetchone()[0]
+        
+        # Si es la primera wallet, establecerla como predeterminada
+        is_default = count == 0
+        
+        # Insertar la nueva wallet
         cur.execute(
-            'INSERT INTO wallets (user_id, private_key, salt) VALUES (%s, %s, %s)',
-            (user_id, private_key, salt)
+            'INSERT INTO wallets (user_id, address, private_key, salt, is_default) VALUES (%s, %s, %s, %s, %s)',
+            (user_id, address, private_key, salt, is_default)
         )
+        
         conn.commit()
-        logger.info(f"Wallet guardada exitosamente para el usuario {user_id}")
+        logger.info(f"Wallet guardada correctamente para usuario {user_id}")
         return True
     except Exception as e:
         logger.error(f"Error al guardar wallet: {e}")
+        if conn:
+            conn.rollback()
         return False
     finally:
-        if 'cur' in locals():
-            cur.close()
-        if 'conn' in locals():
+        if conn:
             conn.close()
 
 def get_user_wallets(user_id):
