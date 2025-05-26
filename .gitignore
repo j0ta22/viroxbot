@@ -24,15 +24,22 @@ wheels/
 .installed.cfg
 *.egg
 
-# Database
-*.db
-*.sqlite3
+# Virtual Environment
+venv/
+ENV/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
 
 # OS
 .DS_Store
