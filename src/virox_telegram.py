@@ -333,22 +333,43 @@ async def destination_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 def main():
     """Función principal para iniciar el bot"""
-    # Crear la aplicación
-    application = Application.builder().token(TOKEN).build()
+    try:
+        # Crear la aplicación
+        application = Application.builder().token(TOKEN).build()
 
-    # Añadir manejadores
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("wallets", wallets_command))
-    application.add_handler(CommandHandler("check", check_command))
-    application.add_handler(CommandHandler("delete", delete_command))
-    application.add_handler(CommandHandler("destination", destination_command))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
-    application.add_handler(CallbackQueryHandler(button_handler))
+        # Añadir manejadores
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("wallets", wallets_command))
+        application.add_handler(CommandHandler("check", check_command))
+        application.add_handler(CommandHandler("delete", delete_command))
+        application.add_handler(CommandHandler("destination", destination_command))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
+        application.add_handler(CallbackQueryHandler(button_handler))
 
-    # Iniciar el bot
-    logger.info("Iniciando bot...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+        # Añadir manejador de errores
+        application.add_error_handler(error_handler)
+
+        # Iniciar el bot
+        logger.info("Iniciando bot...")
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,  # Ignorar actualizaciones pendientes al iniciar
+            close_loop=False  # No cerrar el loop al detener
+        )
+    except Exception as e:
+        logger.error(f"Error al iniciar el bot: {e}")
+        raise
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Manejar errores del bot"""
+    logger.error(f"Error en el bot: {context.error}")
+    
+    if update and update.effective_message:
+        await update.effective_message.reply_text(
+            "❌ Ha ocurrido un error inesperado.\n"
+            "Por favor, intenta de nuevo más tarde."
+        )
 
 if __name__ == '__main__':
     main()
