@@ -1,0 +1,17 @@
+services:
+  - type: worker
+    name: virox-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/virox_telegram.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: BASE_RPC_URL
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: LOGO_PATH
+        value: assets/logo.png
+      - key: DB_PATH
+        value: data/wallets.db 

@@ -1,4 +1,4 @@
-# Virox Bot - Transferidor de Tokens ERC20 en Base
+# Virox Bot
 
 Bot de Telegram para gestionar y transferir tokens ERC20 en la red Base.
 
