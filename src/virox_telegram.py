@@ -180,16 +180,25 @@ async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     wallets = get_user_wallets(update.message.from_user.id)
     if not wallets:
-        await update.message.reply_text("No tienes wallets guardadas.")
+        await update.message.reply_text("❌ No tienes wallets guardadas.")
         return
     
-    message = "🔍 Verificando balances...\n\n"
-    for wallet in wallets:
-        decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
-        balance = check_balances(decrypted_key, token_address)
-        message += f"💰 Balance: {balance}\n"
-    
-    await update.message.reply_text(message)
+    try:
+        message = "🔍 Verificando balances...\n\n"
+        for wallet in wallets:
+            try:
+                decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
+                address = Web3().eth.account.from_key(decrypted_key).address
+                balance = check_balances(decrypted_key, token_address)
+                message += f"📍 {address}\n💰 {balance}\n\n"
+            except Exception as e:
+                logger.error(f"Error al procesar wallet {address}: {e}")
+                message += f"❌ Error al verificar balance: {str(e)}\n\n"
+        
+        await update.message.reply_text(message)
+    except Exception as e:
+        logger.error(f"Error en check_command: {e}")
+        await update.message.reply_text(f"❌ Error al verificar balances: {str(e)}")
 
 async def transfer_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /transfer"""
@@ -227,26 +236,38 @@ async def transfer_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /wallets"""
-    wallets = get_user_wallets(update.message.from_user.id)
-    if not wallets:
-        await update.message.reply_text("No tienes wallets guardadas.")
-        return
-    
-    message = "📋 Tus Wallets:\n\n"
-    for wallet in wallets:
-        decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
-        address = Web3().eth.account.from_key(decrypted_key).address
-        balance_wei = Web3().eth.get_balance(address)
-        balance_eth = Web3().from_wei(balance_wei, 'ether')
-        message += f"📍 {address}\n💰 {balance_eth:.4f} ETH\n\n"
-    
-    destination = get_user_destination(update.message.from_user.id)
-    if destination:
-        balance_wei = Web3().eth.get_balance(destination)
-        balance_eth = Web3().from_wei(balance_wei, 'ether')
-        message += f"🎯 Destino: {destination}\n💰 {balance_eth:.4f} ETH"
-    
-    await update.message.reply_text(message)
+    try:
+        wallets = get_user_wallets(update.message.from_user.id)
+        if not wallets:
+            await update.message.reply_text("❌ No tienes wallets guardadas.")
+            return
+        
+        message = "📋 Tus Wallets:\n\n"
+        for wallet in wallets:
+            try:
+                decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
+                address = Web3().eth.account.from_key(decrypted_key).address
+                balance_wei = Web3().eth.get_balance(address)
+                balance_eth = Web3().from_wei(balance_wei, 'ether')
+                message += f"📍 {address}\n💰 {balance_eth:.4f} ETH\n\n"
+            except Exception as e:
+                logger.error(f"Error al procesar wallet: {e}")
+                message += f"❌ Error al obtener balance: {str(e)}\n\n"
+        
+        destination = get_user_destination(update.message.from_user.id)
+        if destination:
+            try:
+                balance_wei = Web3().eth.get_balance(destination)
+                balance_eth = Web3().from_wei(balance_wei, 'ether')
+                message += f"🎯 Destino: {destination}\n💰 {balance_eth:.4f} ETH"
+            except Exception as e:
+                logger.error(f"Error al obtener balance de destino: {e}")
+                message += f"\n❌ Error al obtener balance de destino: {str(e)}"
+        
+        await update.message.reply_text(message)
+    except Exception as e:
+        logger.error(f"Error en wallets_command: {e}")
+        await update.message.reply_text(f"❌ Error al obtener información de wallets: {str(e)}")
 
 def main():
     """Función principal"""
