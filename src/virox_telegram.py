@@ -30,6 +30,17 @@ user_states = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /start"""
+    # Enviar la imagen del logo
+    try:
+        with open('../assets/logo.png', 'rb') as logo:
+            await update.message.reply_photo(
+                photo=logo,
+                caption="🤖 Virox Bot 2.0 - Más virolo que nunca"
+            )
+    except Exception as e:
+        logger.error(f"Error al enviar el logo: {e}")
+        # Si falla el envío de la imagen, continuamos con el mensaje de texto
+    
     keyboard = [
         [InlineKeyboardButton("➕ Añadir Wallet", callback_data='add_wallet')],
         [InlineKeyboardButton("👛 Ver Wallets", callback_data='view_wallets')],
@@ -39,7 +50,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "🤖 Virox Bot 2.0 - Más virolo que nunca\n\n"
         "Bienvenido al gestor de wallets. Por favor, selecciona una opción:",
         reply_markup=reply_markup
     )
@@ -106,15 +116,37 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Si el mensaje es una clave privada
     if text.startswith('0x') and len(text) == 66:
         try:
+            # Validar que sea una clave privada válida
+            if not Web3().is_checksum_address(Web3().eth.account.from_key(text).address):
+                await update.message.reply_text("❌ Clave privada inválida. Por favor, verifica que sea una clave privada de Base válida.")
+                return
+
             # Generar un nuevo salt para cada clave
             salt = os.urandom(16)
             encrypted_key = encrypt_private_key(text, salt)
-            save_wallet(user_id, encrypted_key[0], encrypted_key[1])
-            await update.message.reply_text("✅ Wallet añadida correctamente")
+            
+            # Verificar que la encriptación fue exitosa
+            if not encrypted_key or len(encrypted_key) != 2:
+                await update.message.reply_text("❌ Error al encriptar la clave privada.")
+                return
+
+            # Guardar la wallet
+            if save_wallet(user_id, encrypted_key[0], encrypted_key[1]):
+                address = Web3().eth.account.from_key(text).address
+                await update.message.reply_text(f"✅ Wallet añadida correctamente\n📍 Dirección: {address}")
+            else:
+                await update.message.reply_text("❌ Error al guardar la wallet en la base de datos.")
+        except ValueError as ve:
+            await update.message.reply_text(f"❌ Clave privada inválida: {str(ve)}")
         except Exception as e:
-            await update.message.reply_text(f"❌ Error al guardar la wallet: {str(e)}")
+            await update.message.reply_text(f"❌ Error al procesar la wallet: {str(e)}")
     else:
-        await update.message.reply_text("❌ Por favor, envía una clave privada válida (0x...)")
+        await update.message.reply_text(
+            "❌ Formato inválido. Por favor, envía una clave privada válida:\n"
+            "- Debe comenzar con '0x'\n"
+            "- Debe tener 66 caracteres\n"
+            "- Debe ser una clave privada de Base válida"
+        )
 
 async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /check"""
