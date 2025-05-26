@@ -7,6 +7,9 @@ from database import init_db, save_wallet, get_user_wallets, save_destination, g
 from web3_utils import get_wallets_info, check_balances, transfer_tokens
 from encryption import encrypt_private_key, decrypt_private_key
 from web3 import Web3
+import time
+import asyncio
+import telegram.error
 
 # Configuración
 load_dotenv()
@@ -352,18 +355,35 @@ def main():
 
         # Iniciar el bot
         logger.info("Iniciando bot...")
+        
+        # Configurar el polling con parámetros específicos
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True,  # Ignorar actualizaciones pendientes al iniciar
-            close_loop=False  # No cerrar el loop al detener
+            drop_pending_updates=True,
+            close_loop=False,
+            pool_timeout=30,  # Aumentar el timeout
+            read_timeout=30,  # Aumentar el timeout de lectura
+            write_timeout=30,  # Aumentar el timeout de escritura
+            connect_timeout=30,  # Aumentar el timeout de conexión
+            pool_size=1  # Limitar el tamaño del pool a 1
         )
     except Exception as e:
         logger.error(f"Error al iniciar el bot: {e}")
+        # Esperar un poco antes de reintentar
+        time.sleep(5)
         raise
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Manejar errores del bot"""
-    logger.error(f"Error en el bot: {context.error}")
+    error = context.error
+    logger.error(f"Error en el bot: {error}")
+    
+    # Manejar específicamente el error de conflicto
+    if isinstance(error, telegram.error.Conflict):
+        logger.error("Detectado conflicto de instancias múltiples. Reiniciando...")
+        # Esperar un poco antes de continuar
+        await asyncio.sleep(5)
+        return
     
     if update and update.effective_message:
         await update.effective_message.reply_text(
@@ -372,4 +392,19 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
 
 if __name__ == '__main__':
-    main()
+    # Importar módulos necesarios
+    import time
+    import asyncio
+    import telegram.error
+    
+    # Configurar el loop de eventos
+    loop = asyncio.get_event_loop()
+    
+    try:
+        main()
+    except Exception as e:
+        logger.error(f"Error fatal en el bot: {e}")
+        # Esperar antes de reintentar
+        time.sleep(5)
+        # Reiniciar el bot
+        loop.run_until_complete(main())
