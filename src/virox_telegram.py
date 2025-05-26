@@ -8,19 +8,35 @@ from web3_utils import get_wallets_info, check_balances, transfer_tokens
 from encryption import encrypt_private_key, decrypt_private_key
 from web3 import Web3
 
-# Configuración de logging
+# Configuración
+load_dotenv()
+
+# Variables de entorno
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+if not TOKEN:
+    raise ValueError("No se encontró el token del bot en las variables de entorno")
+
+BASE_RPC_URL = os.getenv('BASE_RPC_URL', 'https://mainnet.base.org')
+DB_URL = os.getenv('DATABASE_URL')
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+
+# Verificar variables críticas
+if not all([TOKEN, DB_URL, ENCRYPTION_KEY]):
+    missing_vars = []
+    if not TOKEN:
+        missing_vars.append('TELEGRAM_BOT_TOKEN')
+    if not DB_URL:
+        missing_vars.append('DATABASE_URL')
+    if not ENCRYPTION_KEY:
+        missing_vars.append('ENCRYPTION_KEY')
+    raise ValueError(f"Faltan las siguientes variables de entorno: {', '.join(missing_vars)}")
+
+# Configurar el logger
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-# Cargar variables de entorno
-load_dotenv()
-
-# Configuración del bot
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-BASE_RPC_URL = os.getenv('BASE_RPC_URL')
 
 # Inicializar la base de datos
 init_db()
