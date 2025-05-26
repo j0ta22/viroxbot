@@ -1,1 +1,1 @@
-worker: python src/virox_telegram.py 
+web: python src/virox_telegram.py 

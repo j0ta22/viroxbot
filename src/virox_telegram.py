@@ -3,9 +3,9 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from dotenv import load_dotenv
-from src.database import init_db, save_wallet, get_user_wallets, save_destination, get_user_destination, delete_user_wallets
-from src.encryption import encrypt_private_key, decrypt_private_key
-from src.web3_utils import check_balances, transfer_tokens
+from database import init_db, save_wallet, get_user_wallets, save_destination, get_user_destination, delete_user_wallets
+from web3_utils import get_wallets_info, check_balances, transfer_tokens
+from encryption import encrypt_private_key, decrypt_private_key
 from web3 import Web3
 
 # Configuración de logging
