@@ -124,64 +124,60 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.message.reply_text("❌ Error al eliminar las wallets.")
 
-async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Maneja los mensajes de texto"""
-    if not update.message or not update.message.text:
-        return
+async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Manejar mensajes de texto"""
+    try:
+        user_id = update.effective_user.id
+        message_text = update.message.text
 
-    user_id = update.message.from_user.id
-    text = update.message.text.strip()
-
-    # Si el mensaje es una clave privada
-    if text.startswith('0x') and len(text) == 66:
-        try:
+        # Verificar si el mensaje es una clave privada
+        if message_text.startswith('0x') and len(message_text) == 66:
             logger.info(f"Intentando procesar clave privada para usuario {user_id}")
             
-            # Intentar crear una cuenta con la clave privada
-            account = Web3().eth.account.from_key(text)
-            logger.info(f"Cuenta creada con dirección: {account.address}")
-
-            # Generar un nuevo salt para cada clave
-            salt = os.urandom(16)
-            logger.info("Salt generado correctamente")
-
-            # Encriptar la clave
-            encrypted_key = encrypt_private_key(text, salt)
-            logger.info("Clave encriptada correctamente")
-
-            # Guardar la wallet
-            if save_wallet(user_id, encrypted_key, salt):
-                logger.info(f"Wallet guardada correctamente para usuario {user_id}")
+            try:
+                # Crear cuenta con la clave privada
+                account = Web3().eth.account.from_key(message_text)
+                logger.info(f"Cuenta creada con dirección: {account.address}")
+                
+                # Generar salt único
+                salt = os.urandom(16).hex()
+                logger.info("Salt generado correctamente")
+                
+                # Encriptar la clave privada
+                encrypted_key = encrypt_private_key(message_text, salt)
+                logger.info("Clave encriptada correctamente")
+                
+                # Guardar en la base de datos
+                if save_wallet(user_id, account.address, encrypted_key, salt):
+                    logger.info(f"Wallet guardada correctamente para usuario {user_id}")
+                    await update.message.reply_text(
+                        f"✅ Wallet añadida correctamente\n"
+                        f"📍 Dirección: {account.address}\n"
+                        f"🔑 Clave encriptada y guardada de forma segura"
+                    )
+                else:
+                    logger.error(f"Error al guardar wallet para usuario {user_id}")
+                    await update.message.reply_text(
+                        "❌ Error al guardar la wallet.\n"
+                        "Por favor, intenta de nuevo o contacta al soporte."
+                    )
+            except Exception as e:
+                logger.error(f"Error inesperado al procesar wallet: {e}")
                 await update.message.reply_text(
-                    f"✅ Wallet añadida correctamente\n"
-                    f"📍 Dirección: {account.address}\n"
-                    f"🔑 Clave encriptada y guardada de forma segura"
+                    "❌ Error al procesar la wallet.\n"
+                    "Por favor, intenta de nuevo o contacta al soporte."
                 )
-            else:
-                logger.error(f"Error al guardar wallet para usuario {user_id}")
-                await update.message.reply_text("❌ Error al guardar la wallet en la base de datos.")
-        except ValueError as ve:
-            logger.error(f"Error de valor al procesar clave: {ve}")
+        else:
+            # Si no es una clave privada, pedir una
             await update.message.reply_text(
-                "❌ Clave privada inválida.\n"
-                "Por favor, asegúrate de que:\n"
-                "- La clave comienza con '0x'\n"
-                "- La clave tiene 64 caracteres hexadecimales\n"
-                "- La clave es válida para la red Base"
+                "Por favor, envía la private key de tu wallet.\n"
+                "⚠️ Asegúrate de que sea una private key válida de Base."
             )
-        except Exception as e:
-            logger.error(f"Error inesperado al procesar wallet: {e}")
-            await update.message.reply_text(
-                "❌ Error al procesar la wallet.\n"
-                "Por favor, intenta de nuevo o contacta al soporte."
-            )
-    else:
-        logger.info(f"Mensaje recibido no válido: {text[:10]}...")
+    except Exception as e:
+        logger.error(f"Error inesperado: {e}")
         await update.message.reply_text(
-            "❌ Formato inválido. Por favor, envía una clave privada válida:\n"
-            "- Debe comenzar con '0x'\n"
-            "- Debe tener 66 caracteres (0x + 64 caracteres hexadecimales)\n"
-            "- Debe ser una clave privada válida de Base"
+            "❌ Ha ocurrido un error inesperado.\n"
+            "Por favor, intenta de nuevo más tarde."
         )
 
 async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -253,46 +249,58 @@ async def transfer_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message)
 
-async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manejar el comando /wallets"""
+async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Mostrar las wallets del usuario"""
     try:
-        wallets = get_user_wallets(update.message.from_user.id)
-        if not wallets:
-            await update.message.reply_text("❌ No tienes wallets guardadas.")
-            return
+        user_id = update.effective_user.id
+        wallets = get_user_wallets(user_id)
         
+        if not wallets:
+            await update.message.reply_text(
+                "❌ No tienes wallets guardadas.\n"
+                "Usa el comando /start para añadir una."
+            )
+            return
+            
+        # Obtener la dirección de destino
+        destination = get_user_destination(user_id)
+        destination_address = destination[0] if destination else None
+        
+        # Construir el mensaje
         message = "📋 Tus Wallets:\n\n"
+        
         for wallet in wallets:
             try:
-                # Verificar que los datos estén en el formato correcto
-                if not isinstance(wallet['private_key'], bytes):
-                    logger.error(f"Formato inválido de private_key para wallet: {wallet}")
-                    message += "❌ Error: Formato de wallet inválido\n\n"
-                    continue
-
-                decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
-                address = Web3().eth.account.from_key(decrypted_key).address
-                balance_wei = Web3().eth.get_balance(address)
-                balance_eth = Web3().from_wei(balance_wei, 'ether')
-                message += f"📍 {address}\n💰 {balance_eth:.4f} ETH\n\n"
+                # Desencriptar la clave privada
+                private_key = decrypt_private_key(wallet[2], wallet[3])
+                
+                # Obtener el balance
+                balance = get_wallet_balance(wallet[1])
+                
+                message += f"📍 Dirección: {wallet[1]}\n"
+                message += f"💰 Balance: {balance} ETH\n\n"
             except Exception as e:
-                logger.error(f"Error al procesar wallet: {e}")
-                message += f"❌ Error al obtener balance: {str(e)}\n\n"
+                logger.error(f"Error al procesar wallet {wallet[1]}: {e}")
+                message += f"❌ Error al procesar wallet {wallet[1]}\n\n"
         
-        destination = get_user_destination(update.message.from_user.id)
-        if destination:
+        if destination_address:
             try:
-                balance_wei = Web3().eth.get_balance(destination)
-                balance_eth = Web3().from_wei(balance_wei, 'ether')
-                message += f"🎯 Destino: {destination}\n💰 {balance_eth:.4f} ETH"
+                # Obtener el balance de la dirección de destino
+                dest_balance = get_wallet_balance(destination_address)
+                message += f"\n🎯 Dirección de destino:\n"
+                message += f"📍 {destination_address}\n"
+                message += f"💰 Balance: {dest_balance} ETH"
             except Exception as e:
                 logger.error(f"Error al obtener balance de destino: {e}")
                 message += f"\n❌ Error al obtener balance de destino: {str(e)}"
         
         await update.message.reply_text(message)
     except Exception as e:
-        logger.error(f"Error en wallets_command: {e}")
-        await update.message.reply_text(f"❌ Error al obtener información de wallets: {str(e)}")
+        logger.error(f"Error al obtener wallets: {e}")
+        await update.message.reply_text(
+            "❌ Error al obtener las wallets.\n"
+            "Por favor, intenta de nuevo más tarde."
+        )
 
 async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /delete"""
