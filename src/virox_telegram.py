@@ -96,42 +96,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("❌ Error al eliminar las wallets.")
 
 async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manejar mensajes de texto"""
-    user_id = update.message.from_user.id
-    text = update.message.text
-    
-    if user_id not in user_states:
-        await update.message.reply_text(
-            "Por favor, usa los botones del menú para interactuar con el bot."
-        )
+    """Maneja los mensajes de texto"""
+    if not update.message or not update.message.text:
         return
-    
-    if user_states[user_id] == 'waiting_private_key':
-        if not Web3().is_address(Web3().eth.account.from_key(text).address):
-            await update.message.reply_text("❌ Private key inválida. Por favor, intenta de nuevo.")
-            return
-        
-        salt = os.urandom(16).hex()
-        encrypted_key = encrypt_private_key(text, salt)
-        
-        if save_wallet(user_id, encrypted_key, salt):
-            await update.message.reply_text("✅ Wallet guardada exitosamente!")
-        else:
-            await update.message.reply_text("❌ Error al guardar la wallet.")
-        
-        del user_states[user_id]
-    
-    elif user_states[user_id] == 'waiting_destination':
-        if not Web3().is_address(text):
-            await update.message.reply_text("❌ Dirección inválida. Por favor, intenta de nuevo.")
-            return
-        
-        if save_destination(user_id, text):
-            await update.message.reply_text("✅ Dirección de destino guardada exitosamente!")
-        else:
-            await update.message.reply_text("❌ Error al guardar la dirección de destino.")
-        
-        del user_states[user_id]
+
+    user_id = update.message.from_user.id
+    text = update.message.text.strip()
+
+    # Si el mensaje es una clave privada
+    if text.startswith('0x') and len(text) == 66:
+        try:
+            # Generar un nuevo salt para cada clave
+            salt = os.urandom(16)
+            encrypted_key = encrypt_private_key(text, salt)
+            save_wallet(user_id, encrypted_key[0], encrypted_key[1])
+            await update.message.reply_text("✅ Wallet añadida correctamente")
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error al guardar la wallet: {str(e)}")
+    else:
+        await update.message.reply_text("❌ Por favor, envía una clave privada válida (0x...)")
 
 async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar el comando /check"""
