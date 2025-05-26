@@ -245,6 +245,12 @@ async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = "📋 Tus Wallets:\n\n"
         for wallet in wallets:
             try:
+                # Verificar que los datos estén en el formato correcto
+                if not isinstance(wallet['private_key'], bytes):
+                    logger.error(f"Formato inválido de private_key para wallet: {wallet}")
+                    message += "❌ Error: Formato de wallet inválido\n\n"
+                    continue
+
                 decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
                 address = Web3().eth.account.from_key(decrypted_key).address
                 balance_wei = Web3().eth.get_balance(address)
