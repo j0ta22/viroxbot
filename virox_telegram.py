@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from src.database import init_db, save_wallet, get_user_wallets, save_destination, get_user_destination, delete_user_wallets
 from src.encryption import encrypt_private_key, decrypt_private_key
 from src.web3_utils import check_balances, transfer_tokens
-from web3 import Web3
 
 # Configuración de logging
 logging.basicConfig(
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Configuración del bot
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 BASE_RPC_URL = os.getenv('BASE_RPC_URL')
 
 # Inicializar la base de datos
@@ -39,22 +38,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "🤖 Virox Bot 2.0 - Más virolo que nunca\n\n"
-        "Bienvenido al gestor de wallets. Por favor, selecciona una opción:",
+        "¡Bienvenido al Bot de Virox! 🚀\n\n"
+        "Selecciona una opción:",
         reply_markup=reply_markup
     )
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manejar el comando /help"""
-    help_text = (
-        "Comandos disponibles:\n"
-        "/start - Gestionar wallets\n"
-        "/check <dirección> - Verificar balance de tokens\n"
-        "/transfer <dirección> - Transferir tokens\n"
-        "/wallets - Ver billeteras y balances en ETH\n"
-        "/help - Mostrar esta ayuda"
-    )
-    await update.message.reply_text(help_text)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manejar los botones inline"""
@@ -193,41 +180,16 @@ async def transfer_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message)
 
-async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manejar el comando /wallets"""
-    wallets = get_user_wallets(update.message.from_user.id)
-    if not wallets:
-        await update.message.reply_text("No tienes wallets guardadas.")
-        return
-    
-    message = "📋 Tus Wallets:\n\n"
-    for wallet in wallets:
-        decrypted_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
-        address = Web3().eth.account.from_key(decrypted_key).address
-        balance_wei = Web3().eth.get_balance(address)
-        balance_eth = Web3().from_wei(balance_wei, 'ether')
-        message += f"📍 {address}\n💰 {balance_eth:.4f} ETH\n\n"
-    
-    destination = get_user_destination(update.message.from_user.id)
-    if destination:
-        balance_wei = Web3().eth.get_balance(destination)
-        balance_eth = Web3().from_wei(balance_wei, 'ether')
-        message += f"🎯 Destino: {destination}\n💰 {balance_eth:.4f} ETH"
-    
-    await update.message.reply_text(message)
-
 def main():
     """Función principal"""
     application = Application.builder().token(TOKEN).build()
     
     # Handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("check", check_command))
-    application.add_handler(CommandHandler("transfer", transfer_command))
-    application.add_handler(CommandHandler("wallets", wallets_command))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
+    application.add_handler(CommandHandler("check", check_command))
+    application.add_handler(CommandHandler("transfer", transfer_command))
     
     # Iniciar el bot
     application.run_polling()

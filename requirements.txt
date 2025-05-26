@@ -1,4 +1,4 @@
-pyTelegramBotAPI==4.14.0
+python-telegram-bot==20.7
 web3==6.11.1
 python-dotenv==1.0.0
 cryptography==41.0.7
@@ -7,4 +7,5 @@ eth-typing==4.0.0
 eth-utils==2.3.1
 requests==2.31.0
 aiohttp==3.9.1
-python-dateutil==2.8.2 
+python-dateutil==2.8.2
+psycopg2-binary==2.9.9 
