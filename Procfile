@@ -1,0 +1,1 @@
+worker: python src/virox_telegram.py 
