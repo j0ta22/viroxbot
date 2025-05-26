@@ -291,6 +291,18 @@ async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error en wallets_command: {e}")
         await update.message.reply_text(f"❌ Error al obtener información de wallets: {str(e)}")
 
+async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manejar el comando /delete"""
+    try:
+        user_id = update.message.from_user.id
+        if delete_user_wallets(user_id):
+            await update.message.reply_text("✅ Todas tus wallets han sido eliminadas correctamente.")
+        else:
+            await update.message.reply_text("❌ No tienes wallets guardadas para eliminar.")
+    except Exception as e:
+        logger.error(f"Error en delete_command: {e}")
+        await update.message.reply_text(f"❌ Error al eliminar wallets: {str(e)}")
+
 def main():
     """Función principal para iniciar el bot"""
     # Crear la aplicación
