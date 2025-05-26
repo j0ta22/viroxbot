@@ -5,6 +5,15 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 import logging
 from typing import Union
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Obtener la clave de encriptación
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+if not ENCRYPTION_KEY:
+    raise ValueError("La variable de entorno ENCRYPTION_KEY no está definida")
 
 logger = logging.getLogger(__name__)
 
