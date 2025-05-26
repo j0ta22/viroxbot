@@ -116,36 +116,53 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Si el mensaje es una clave privada
     if text.startswith('0x') and len(text) == 66:
         try:
-            # Validar que sea una clave privada válida
-            if not Web3().is_checksum_address(Web3().eth.account.from_key(text).address):
-                await update.message.reply_text("❌ Clave privada inválida. Por favor, verifica que sea una clave privada de Base válida.")
-                return
+            logger.info(f"Intentando procesar clave privada para usuario {user_id}")
+            
+            # Intentar crear una cuenta con la clave privada
+            account = Web3().eth.account.from_key(text)
+            logger.info(f"Cuenta creada con dirección: {account.address}")
 
             # Generar un nuevo salt para cada clave
             salt = os.urandom(16)
+            logger.info("Salt generado correctamente")
+
+            # Encriptar la clave
             encrypted_key = encrypt_private_key(text, salt)
-            
-            # Verificar que la encriptación fue exitosa
-            if not encrypted_key or len(encrypted_key) != 2:
-                await update.message.reply_text("❌ Error al encriptar la clave privada.")
-                return
+            logger.info("Clave encriptada correctamente")
 
             # Guardar la wallet
             if save_wallet(user_id, encrypted_key[0], encrypted_key[1]):
-                address = Web3().eth.account.from_key(text).address
-                await update.message.reply_text(f"✅ Wallet añadida correctamente\n📍 Dirección: {address}")
+                logger.info(f"Wallet guardada correctamente para usuario {user_id}")
+                await update.message.reply_text(
+                    f"✅ Wallet añadida correctamente\n"
+                    f"📍 Dirección: {account.address}\n"
+                    f"🔑 Clave encriptada y guardada de forma segura"
+                )
             else:
+                logger.error(f"Error al guardar wallet para usuario {user_id}")
                 await update.message.reply_text("❌ Error al guardar la wallet en la base de datos.")
         except ValueError as ve:
-            await update.message.reply_text(f"❌ Clave privada inválida: {str(ve)}")
+            logger.error(f"Error de valor al procesar clave: {ve}")
+            await update.message.reply_text(
+                "❌ Clave privada inválida.\n"
+                "Por favor, asegúrate de que:\n"
+                "- La clave comienza con '0x'\n"
+                "- La clave tiene 64 caracteres hexadecimales\n"
+                "- La clave es válida para la red Base"
+            )
         except Exception as e:
-            await update.message.reply_text(f"❌ Error al procesar la wallet: {str(e)}")
+            logger.error(f"Error inesperado al procesar wallet: {e}")
+            await update.message.reply_text(
+                "❌ Error al procesar la wallet.\n"
+                "Por favor, intenta de nuevo o contacta al soporte."
+            )
     else:
+        logger.info(f"Mensaje recibido no válido: {text[:10]}...")
         await update.message.reply_text(
             "❌ Formato inválido. Por favor, envía una clave privada válida:\n"
             "- Debe comenzar con '0x'\n"
-            "- Debe tener 66 caracteres\n"
-            "- Debe ser una clave privada de Base válida"
+            "- Debe tener 66 caracteres (0x + 64 caracteres hexadecimales)\n"
+            "- Debe ser una clave privada válida de Base"
         )
 
 async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
