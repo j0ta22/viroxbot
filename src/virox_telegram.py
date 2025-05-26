@@ -147,7 +147,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info("Clave encriptada correctamente")
 
             # Guardar la wallet
-            if save_wallet(user_id, encrypted_key[0], encrypted_key[1]):
+            if save_wallet(user_id, encrypted_key, salt):
                 logger.info(f"Wallet guardada correctamente para usuario {user_id}")
                 await update.message.reply_text(
                     f"✅ Wallet añadida correctamente\n"
