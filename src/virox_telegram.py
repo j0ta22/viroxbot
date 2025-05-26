@@ -364,8 +364,7 @@ def main():
             pool_timeout=30,  # Aumentar el timeout
             read_timeout=30,  # Aumentar el timeout de lectura
             write_timeout=30,  # Aumentar el timeout de escritura
-            connect_timeout=30,  # Aumentar el timeout de conexión
-            pool_size=1  # Limitar el tamaño del pool a 1
+            connect_timeout=30  # Aumentar el timeout de conexión
         )
     except Exception as e:
         logger.error(f"Error al iniciar el bot: {e}")
