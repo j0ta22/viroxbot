@@ -276,20 +276,23 @@ async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error al obtener información de wallets: {str(e)}")
 
 def main():
-    """Función principal"""
+    """Función principal para iniciar el bot"""
+    # Crear la aplicación
     application = Application.builder().token(TOKEN).build()
-    
-    # Handlers
+
+    # Añadir manejadores
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("check", check_command))
-    application.add_handler(CommandHandler("transfer", transfer_command))
     application.add_handler(CommandHandler("wallets", wallets_command))
-    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(CommandHandler("check", check_command))
+    application.add_handler(CommandHandler("delete", delete_command))
+    application.add_handler(CommandHandler("destination", destination_command))
+    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
-    
+    application.add_handler(CallbackQueryHandler(button_handler))
+
     # Iniciar el bot
-    application.run_polling()
+    logger.info("Iniciando bot...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
