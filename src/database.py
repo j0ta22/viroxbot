@@ -123,8 +123,24 @@ def get_user_wallets(user_id):
             ORDER BY is_default DESC, created_at DESC
         ''', (user_id,))
         results = cur.fetchall()
+        
+        # Convertir los resultados a una lista de diccionarios
+        wallets = []
+        for row in results:
+            # Asegurarse de que private_key sea bytes
+            private_key = row['private_key']
+            if isinstance(private_key, str):
+                private_key = private_key.encode()
+                
+            wallets.append({
+                'address': row['address'],
+                'private_key': private_key,
+                'salt': row['salt'],
+                'is_default': row['is_default']
+            })
+            
         logger.info(f"Wallets obtenidas para el usuario {user_id}")
-        return results
+        return wallets
     except Exception as e:
         logger.error(f"Error al obtener wallets: {e}")
         return []
@@ -189,4 +205,24 @@ def delete_user_wallets(user_id):
         if 'cur' in locals():
             cur.close()
         if 'conn' in locals():
+            conn.close()
+
+def drop_wallets_table():
+    """Eliminar la tabla wallets"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Eliminar la tabla wallets
+        cur.execute('DROP TABLE IF EXISTS wallets CASCADE')
+        
+        conn.commit()
+        logger.info("Tabla wallets eliminada correctamente")
+    except Exception as e:
+        logger.error(f"Error al eliminar la tabla wallets: {e}")
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
             conn.close() 

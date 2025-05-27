@@ -272,16 +272,19 @@ async def wallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         for wallet in wallets:
             try:
                 # Desencriptar la clave privada
-                private_key = decrypt_private_key(wallet[2], wallet[3])
+                private_key = decrypt_private_key(wallet['private_key'], wallet['salt'])
                 
                 # Obtener el balance
-                balance = get_wallet_balance(wallet[1])
+                balance = get_wallet_balance(wallet['address'])
                 
-                message += f"📍 Dirección: {wallet[1]}\n"
-                message += f"💰 Balance: {balance} ETH\n\n"
+                message += f"📍 Dirección: {wallet['address']}\n"
+                message += f"💰 Balance: {balance} ETH\n"
+                if wallet['is_default']:
+                    message += "⭐️ Wallet predeterminada\n"
+                message += "\n"
             except Exception as e:
-                logger.error(f"Error al procesar wallet {wallet[1]}: {e}")
-                message += f"❌ Error al procesar wallet {wallet[1]}\n\n"
+                logger.error(f"Error al procesar wallet {wallet['address']}: {e}")
+                message += f"❌ Error al procesar wallet {wallet['address']}\n\n"
         
         if destination_address:
             try:
