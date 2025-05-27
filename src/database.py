@@ -38,10 +38,14 @@ def init_db():
         # Crear tabla de wallets
         cur.execute('''
             CREATE TABLE IF NOT EXISTS wallets (
-                user_id BIGINT,
-                private_key TEXT,
-                salt TEXT,
-                PRIMARY KEY (user_id, private_key)
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                address TEXT NOT NULL,
+                private_key TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                is_default BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, address)
             )
         ''')
         
@@ -49,7 +53,8 @@ def init_db():
         cur.execute('''
             CREATE TABLE IF NOT EXISTS destinations (
                 user_id BIGINT PRIMARY KEY,
-                address TEXT
+                address TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -57,11 +62,11 @@ def init_db():
         logger.info("Base de datos inicializada correctamente")
     except Exception as e:
         logger.error(f"Error al inicializar la base de datos: {e}")
+        if conn:
+            conn.rollback()
         raise
     finally:
-        if 'cur' in locals():
-            cur.close()
-        if 'conn' in locals():
+        if conn:
             conn.close()
 
 def save_wallet(user_id: int, address: str, private_key: bytes, salt: str) -> bool:
@@ -111,7 +116,12 @@ def get_user_wallets(user_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=DictCursor)
-        cur.execute('SELECT private_key, salt FROM wallets WHERE user_id = %s', (user_id,))
+        cur.execute('''
+            SELECT address, private_key, salt, is_default 
+            FROM wallets 
+            WHERE user_id = %s 
+            ORDER BY is_default DESC, created_at DESC
+        ''', (user_id,))
         results = cur.fetchall()
         logger.info(f"Wallets obtenidas para el usuario {user_id}")
         return results
@@ -119,9 +129,7 @@ def get_user_wallets(user_id):
         logger.error(f"Error al obtener wallets: {e}")
         return []
     finally:
-        if 'cur' in locals():
-            cur.close()
-        if 'conn' in locals():
+        if conn:
             conn.close()
 
 def save_destination(user_id, address):
